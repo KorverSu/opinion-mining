@@ -1,3 +1,5 @@
+import time
+
 import redis
 from src.config import REDIS_HOST, REDIS_PORT
 
@@ -55,20 +57,43 @@ class RedisClient:
         try:
             self.__r.hset(name, key, value)
         except Exception as e:
-            print("add_hash fail Error is: {}", e)
+            print("add_hash_value fail Error is: {}", e)
 
-    def fetch_hash_value(self, name, key):
+    def fetch_hash_value(self, name: str, key: str):
         try:
             return self.__r.hget(name, key)
         except Exception as e:
-            print("add_hash fail Error is: {}", e)
+            print("fetch_hash_value fail Error is: {}", e)
+
+    def fetch_all_hash_value(self, name: str):
+        try:
+            return self.__r.hgetall(name)
+        except Exception as e:
+            print("fetch_all_hash_value fail Error is: {}", e)
+
+    def change_hash_value(self, name: str, key: str, value: str):
+        with self.__r.pipeline() as pipe:
+            while True:
+                try:
+                    pipe.watch(name)
+                    pipe.multi()
+                    pipe.hset(name, key, value)
+                    pipe.execute()
+                    break
+                except redis.WatchError:
+                    time.sleep(3)
+                    print("The selenium_nodes state already changed, retry")
+                    continue
 
     def __del__(self):
         self.__r.close()
 
 
 if __name__ == '__main__':
-    pass
-    #rc = RedisClient()
-    #rc.add_hash_value('selenium_nodes', 'localhost:4444', 'idle')
-    #print(rc.fetch_hash_value('selenium_nodes', 'localhost:4444'))
+    rc = RedisClient()
+    rc.change_hash_value('selenium_nodes', 'localhost:4444', 'idle')
+    rc.add_set_element('url', 'https://news.tvbs.com.tw/politics/2')
+    rc.add_set_element('url', 'https://news.tvbs.com.tw/politics/2096437')
+    rc.add_set_element('url', 'https://news.tvbs.com.tw/politics/2096391')
+    print(rc.fetch_all_hash_value('selenium_nodes'))
+    print(rc.fetch_set_elements("url"))

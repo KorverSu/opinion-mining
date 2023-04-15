@@ -4,18 +4,18 @@ import time
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from src.config import DRIVER_PATH, PTS_NUM, TVBS_NUM, SETN_NUM, SELENIUM_HOST, SELENIUM_PORT
+from src.config import DRIVER_PATH, PTS_NUM, TVBS_NUM, SETN_NUM, SELENIUM_IP, SELENIUM_PORT
 from src.client.redis_client import RedisClient
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 class URLCollector:
-    def __init__(self, host=SELENIUM_HOST, port=SELENIUM_PORT):
+    def __init__(self, ip=SELENIUM_IP, port=SELENIUM_PORT):
         self.__redis_cli = RedisClient()
         # self.__driver = webdriver.Chrome(executable_path=DRIVER_PATH)
         self.__driver = webdriver.Remote(
-            command_executor='http://{}:{}'.format(host, port),
+            command_executor='http://{}:{}'.format(ip, port),
             desired_capabilities={'browserName': 'chrome', 'javascriptEnabled': True})
         self.__page_num = 1
 
@@ -155,3 +155,8 @@ class URLCollector:
 
     def __del__(self):
         self.__driver.quit()
+
+
+if __name__ == '__main__':
+    uc = URLCollector()
+    uc.collect_new_tvbs_url()
