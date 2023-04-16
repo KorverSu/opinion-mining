@@ -1,5 +1,6 @@
 import time
 from src.client.redis_client import RedisClient
+from src.client.kafka_client import KafkaClient
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 from src.config import DRIVER_PATH, SELENIUM_IP, SELENIUM_PORT
@@ -12,7 +13,6 @@ class CrawlerExecutor:
         self.__driver = webdriver.Remote(
             command_executor='http://{}:{}'.format(ip, port),
             desired_capabilities={'browserName': 'chrome', 'javascriptEnabled': True})
-        self.__page_num = 1
         self.__result = None
 
     def get_result(self):
@@ -77,42 +77,6 @@ class CrawlerExecutor:
             print('crawl_ebc fail. Error is: ', e)
             self.__result = None
 
-    def visit_ebc(self):
-        # 東森
-        url = "https://news.ebc.net.tw/news/politics"
-        self.__driver.get(url)
-        while 1:
-            try:
-                news_list = self.__driver.find_elements(By.CLASS_NAME, "style1")
-                news_list = [x for x in news_list if "white-box" in x.get_attribute("class")]
-                if len(news_list) == 0:
-                    print('All news have already been scraped.')
-                    break
-                for news in news_list:
-                    tmp_driver = webdriver.Chrome(executable_path=DRIVER_PATH)
-                    release_time = news.find_element(By.CLASS_NAME, "small-gray-text").text
-                    ref = news.find_element(By.TAG_NAME, "a")
-                    url = ref.get_attribute("href")
-                    title = ref.get_attribute("title")
-                    print(url)
-                    print(title)
-                    print(release_time)
-                    tmp_driver.get(url)
-                    time.sleep(2)
-                    page = tmp_driver.find_element(By.CLASS_NAME, "raw-style")
-                    contents = page.find_element(By.TAG_NAME, "div").text
-                    print(contents)
-                    tmp_driver.close()
-                    # break  # for test
-                butt = self.__driver.find_element(By.CLASS_NAME, "white-btn")
-                self.__page_num += 1
-                js = "arguments[0].setAttribute('data-page', '{}');".format(str(self.__page_num))
-                self.__driver.execute_script(js, butt)
-                butt.click()
-                time.sleep(2)
-            except Exception as e:
-                print("The ebc url is invalid: ", e)
-
     def crawl_ttv(self, source_url: str):
         try:
             self.__driver.get(source_url)
@@ -129,35 +93,6 @@ class CrawlerExecutor:
         except Exception as e:
             print('crawl_ttv fail. Error is: ', e)
             self.__result = None
-
-    def visit_ttv(self):
-        # 台視
-        while 1:
-            try:
-                url = "https://news.ttv.com.tw/category/%E6%94%BF%E6%B2%BB/{}".format(self.__page_num)
-                self.__driver.get(url)
-                main = self.__driver.find_element(By.TAG_NAME, "main")
-                news_list = main.find_elements(By.TAG_NAME, "li")
-                if len(news_list) == 0:
-                    print('All news have already been scraped.')
-                    break
-                for news in news_list:
-                    tmp_driver = webdriver.Chrome(executable_path=DRIVER_PATH)
-                    url = news.find_element(By.TAG_NAME, "a").get_attribute("href")
-                    title = news.find_element(By.CLASS_NAME, "title").text
-                    release_time = news.find_element(By.CLASS_NAME, "time").text
-                    print(url)
-                    print(title)
-                    print(release_time)
-                    tmp_driver.get(url)
-                    time.sleep(2)
-                    contents = tmp_driver.find_element(By.ID, "newscontent").text
-                    print(contents)
-                    tmp_driver.close()
-                    # break # for test
-                self.__page_num += 1
-            except Exception as e:
-                print("The ttv url is invalid: ", e)
 
     def crawl_pts(self, source_url: str):
         # 公視 id ~ 629549

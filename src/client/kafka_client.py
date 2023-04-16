@@ -1,13 +1,7 @@
+from kafka import KafkaProducer, KafkaConsumer
+from kafka.admin import KafkaAdminClient, NewTopic
+import json
 from src.config import BROKER1, BROKER2
-from confluent_kafka import Producer, Consumer, KafkaError
-from confluent_kafka.admin import AdminClient, NewTopic
-
-
-def delivery_report(err, msg):
-    if err is not None:
-        print('Message delivery failed: {}'.format(err))
-    else:
-        print('Message delivered to {} [{}]'.format(msg.topic(), msg.partition()))
 
 
 class KafkaClient:
@@ -17,63 +11,46 @@ class KafkaClient:
         self.__admin_client = None
         self.__bootstrap_servers = '{},{}'.format(BROKER1, BROKER2)
 
-    def get_admin_client(self):
-        try:
-            conf = {'bootstrap.servers': self.__bootstrap_servers}
-            self.__admin_client = AdminClient(conf)
-            return self
-        except Exception as e:
-            print('get_admin_client fail. Error is {}'.format(e))
-
     def set_new_topic(self, topic_name: str, num_partitions: int, replication_factor: int):
         try:
-            new_topic = NewTopic(topic_name, num_partitions, replication_factor)
-            self.__admin_client.create_topics([new_topic])
+            admin_client = KafkaAdminClient(bootstrap_servers=self.__bootstrap_servers)
+            new_topic = NewTopic(name=topic_name, num_partitions=num_partitions, replication_factor=replication_factor)
+            admin_client.create_topics(new_topics=[new_topic])
         except Exception as e:
             print('set_new_topic fail. Error is {}'.format(e))
 
-    def get_producer(self):
+    def close_admin_client(self):
+        if self.__admin_client is not None:
+            self.__admin_client.close()
+
+    def produce_value(self, topic_name: str, value: dict):
         try:
-            conf = {'bootstrap.servers': self.__bootstrap_servers}
-            self.__producer = Producer(conf)
-            return self
+            if self.__producer is None:
+                self.__producer = KafkaProducer(bootstrap_servers=self.__bootstrap_servers,
+                                                value_serializer=lambda m: json.dumps(m).encode())
+            self.__producer.send(topic_name, value=value)
         except Exception as e:
-            print('get_producer fail. Error is {}'.format(e))
+            print('produce_value fail. Error is ', e)
 
-    def produce_value(self, topic_name: str, key: str, value: str):
+    def close_producer(self):
+        if self.__producer is not None:
+            self.__producer.close()
+
+    def consume_value(self, topic_name: str, group_id: str):
         try:
-            self.__producer.produce(topic_name, key=key, value=value, callback=delivery_report, )
-            self.__producer.poll(10000)
-            self.__producer.flush()
-        except Exception as e:
-            print('produce_value fail. Error is {}'.format(e))
+            if self.__consumer is None:
+                self.__consumer = KafkaConsumer(topic_name,
+                                                bootstrap_servers=self.__bootstrap_servers,
+                                                group_id=group_id,
+                                                value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+                                                auto_offset_reset='earliest')
+            for msg in self.__consumer:
+                print("key: ", msg.key)
+                print("value: ", msg.value)
 
-    def get_consumer(self, group_id: str):
-        try:
-            conf = {'bootstrap.servers': self.__bootstrap_servers, 'group.id': group_id}
-            self.__consumer = Consumer(conf)
-            return self
-        except Exception as e:
-            print('get_consumer fail. Error is {}'.format(e))
-
-    def consume_value(self, topic_name: str):
-        self.__consumer.subscribe([topic_name])
-        try:
-            while True:
-                msg = self.__consumer.poll(timeout=1.0)
-
-                if msg is None:
-                    continue
-
-                if msg.error():
-                    if msg.error().code() == KafkaError._PARTITION_EOF:
-                        print('Reached end of partition, committing offsets...')
-                        self.__consumer.commit(msg)
-                    else:
-                        print('Error while consuming message: {}'.format(msg.error()))
-                else:
-                    print('Received message: key={}, value={}'.format(msg.key(), msg.value()))
-                    self.__consumer.commit(msg)
         except Exception as e:
             print('consume_value fail. Error is {}'.format(e))
 
+    def close_consumer(self):
+        if self.__consumer is not None:
+            self.__consumer.close()

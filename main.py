@@ -1,16 +1,16 @@
-from confluent_kafka.admin import AdminClient, NewTopic
+'''from kafka.admin import KafkaAdminClient, NewTopic
 
-conf = {'bootstrap.servers': 'localhost:29092,localhost:39092'}
+# 设置 Kafka 集群中的 bootstrap.servers
+bootstrap_servers = 'localhost:29092,localhost:39092'
 
-# Create an AdminClient using the provided configuration
-admin_client = AdminClient(conf)
+# 创建 KafkaAdminClient 实例
+admin_client = KafkaAdminClient(bootstrap_servers=bootstrap_servers)
 
-# Define the new topic name, number of partitions, and replication factor
-topic_name = "test2"
-num_partitions = 1
-replication_factor = 2
+# 定义一个新主题
 
-# Create a new topic with the specified number of partitions and replication factor
-new_topic = NewTopic(topic_name, num_partitions, replication_factor)
-admin_client.create_topics([new_topic])
+new_topic = NewTopic(name='bb', num_partitions=1, replication_factor=2)
+
+# 创建新主题
+admin_client.create_topics(new_topics=[new_topic])
+admin_client.close()'''
 
