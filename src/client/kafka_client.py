@@ -1,7 +1,8 @@
 from kafka import KafkaProducer, KafkaConsumer
 from kafka.admin import KafkaAdminClient, NewTopic
 import json
-from src.config import BROKER1, BROKER2
+import datetime
+from src.config import BROKER1, BROKER2, LOG_TOPIC
 
 
 class KafkaClient:
@@ -51,6 +52,27 @@ class KafkaClient:
         except Exception as e:
             print('consume_value fail. Error is {}'.format(e))
 
-    def close_consumer(self):
+    def send_log(self, method: str, status: bool, message: str):
+        try:
+            if self.__producer is None:
+                self.__producer = KafkaProducer(bootstrap_servers=self.__bootstrap_servers,
+                                                value_serializer=lambda m: json.dumps(m).encode())
+            now = datetime.datetime.now()
+            current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+            log = {
+                "time": current_time,
+                "method": method,
+                "status": status,
+                "message": message
+            }
+            self.produce_value(LOG_TOPIC, log)
+        except Exception as e:
+            print('send_log fail. Error is ', e)
+
+    def __del__(self):
+        if self.__producer is not None:
+            self.__producer.close()
         if self.__consumer is not None:
             self.__consumer.close()
+        if self.__admin_client is not None:
+            self.__admin_client.close()

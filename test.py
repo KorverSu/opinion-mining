@@ -11,6 +11,6 @@ for msg in consumer:
 from src.client.kafka_client import KafkaClient
 
 kc = KafkaClient()
-kc.consume_value('cc', 'qwe')
+kc.consume_value('log', 'qwe')
 
 

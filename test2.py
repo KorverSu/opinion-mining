@@ -18,8 +18,6 @@ from src.client.kafka_client import KafkaClient
 kc = KafkaClient()
 for i in range(2):
     data = {'num': i, 'ts': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-    kc.produce_value('cc', data)
+    kc.produce_value('log', data)
     time.sleep(1)
-
-kc.close_producer()
 

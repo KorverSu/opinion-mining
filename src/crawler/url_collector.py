@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from src.config import DRIVER_PATH, PTS_NUM, TVBS_NUM, SETN_NUM, SELENIUM_IP, SELENIUM_PORT
 from src.client.redis_client import RedisClient
+from src.client.kafka_client import KafkaClient
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
@@ -13,6 +14,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 class URLCollector:
     def __init__(self, ip=SELENIUM_IP, port=SELENIUM_PORT):
         self.__redis_cli = RedisClient()
+        self.__kafka_cli = KafkaClient()
         # self.__driver = webdriver.Chrome(executable_path=DRIVER_PATH)
         self.__driver = webdriver.Remote(
             command_executor='http://{}:{}'.format(ip, port),
@@ -27,17 +29,22 @@ class URLCollector:
             "pts": (PTS_NUM, "https://news.pts.org.tw/article/{}")
         }
         if tv_station not in station_dic.keys():
-            print("{} is unsupported TV station".format(tv_station))
+            error_msg = "{} is unsupported TV station".format(tv_station)
+            print(error_msg)
+            self.__kafka_cli.send_log("URLCollector.collect_old_url_by_id", False, error_msg)
             return
         total = station_dic.get(tv_station)[0]
         for news_id in range(total):
             try:
                 url = station_dic.get(tv_station)[1].format(news_id)
-                # self.__redis_cli.add_set_element('url', url)
-                print("add {} success".format(url))
+                self.__redis_cli.add_set_element('url', url)
+                msg = "add {} to redis key url success".format(url)
+                print(msg)
+                self.__kafka_cli.send_log("URLCollector.collect_old_url_by_id", True, msg)
                 time.sleep(1)
             except Exception as e:
-                print("collect_old_url_by_id fail. Error is: {}".format(e))
+                error_msg = "collect_old_url_by_id fail. Error is: {}".format(e)
+                self.__kafka_cli.send_log("URLCollector.collect_old_url_by_id", False, error_msg)
 
     def collect_ebc_url(self):
         # 東森
@@ -50,17 +57,16 @@ class URLCollector:
                 news_list = self.__driver.find_elements(By.CLASS_NAME, "style1")
                 news_list = [x for x in news_list if "white-box" in x.get_attribute("class")]
                 if len(news_list) == 0:
-                    print('All news have already been scraped.')
+                    msg = 'All news have already been scraped.'
+                    self.__kafka_cli.send_log("URLCollector.collect_ebc_url", True, msg)
                     return
                 for news in news_list:
                     release_time = news.find_element(By.CLASS_NAME, "small-gray-text").text
                     ref = news.find_element(By.TAG_NAME, "a")
                     url = ref.get_attribute("href")
-                    # self.__redis_cli.add_set_element('url', url)
-                    title = ref.get_attribute("title")
-                    print(url)
-                    print(title)
-                    print(release_time)
+                    self.__redis_cli.add_set_element('url', url)
+                    msg = "add {} to redis key url success".format(url)
+                    self.__kafka_cli.send_log("URLCollector.collect_ebc_url", True, msg)
 
                 WebDriverWait(self.__driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "white-btn")))
                 self.__driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -71,7 +77,8 @@ class URLCollector:
                 butt.click()
                 time.sleep(random.randint(1, 3))
             except Exception as e:
-                print("collect_ebc_url fail. Error is: {}".format(e))
+                error_msg = "collect_ebc_url fail. Error is: {}".format(e)
+                self.__kafka_cli.send_log("URLCollector.collect_ebc_url", False, error_msg)
 
     def collect_ttv_url(self):
         # 台視
@@ -83,20 +90,19 @@ class URLCollector:
                 main = self.__driver.find_element(By.TAG_NAME, "main")
                 news_list = main.find_elements(By.TAG_NAME, "li")
                 if len(news_list) == 0:
-                    print('All news have already been scraped.')
+                    msg = 'All news have already been scraped.'
+                    self.__kafka_cli.send_log("URLCollector.collect_ttv_url", True, msg)
                     return
                 for news in news_list:
                     url = news.find_element(By.TAG_NAME, "a").get_attribute("href")
-                    # self.__redis_cli.add_set_element('url', url)
-                    title = news.find_element(By.CLASS_NAME, "title").text
-                    release_time = news.find_element(By.CLASS_NAME, "time").text
-                    print(url)
-                    print(title)
-                    print(release_time)
+                    self.__redis_cli.add_set_element('url', url)
+                    msg = "add {} to redis key url success".format(url)
+                    self.__kafka_cli.send_log("URLCollector.collect_ttv_url", True, msg)
                 time.sleep(random.randint(1, 3))
                 self.__page_num += 1
             except Exception as e:
-                print("collect_ttv_url fail. Error is: {}".format(e))
+                error_msg = "collect_ttv_url fail. Error is: {}".format(e)
+                self.__kafka_cli.send_log("URLCollector.collect_ttv_url", False, error_msg)
 
     def collect_new_tvbs_url(self):
         # 獲取前10熱門的新聞
@@ -108,12 +114,13 @@ class URLCollector:
             news_list = article_rank.find_elements(By.TAG_NAME, "li")
             for news in news_list:
                 url = news.find_element(By.TAG_NAME, "a").get_attribute("href")
-                title = news.find_element(By.CLASS_NAME, "txt").text
-                # self.__redis_cli.add_set_element('url', url)
-                print(title)
-                print(url)
+                # title = news.find_element(By.CLASS_NAME, "txt").text
+                self.__redis_cli.add_set_element('url', url)
+                msg = "add {} to redis key url success".format(url)
+                self.__kafka_cli.send_log("URLCollector.collect_new_tvbs_url", True, msg)
         except Exception as e:
-            print("collect_new_tvbs_url fail. Error is: {}".format(e))
+            error_msg = "collect_new_tvbs_url fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("URLCollector.collect_new_tvbs_url", False, error_msg)
 
     def collect_new_setn_url(self):
         # 獲取前10熱門的新聞
@@ -125,12 +132,13 @@ class URLCollector:
             news_list = top_hot_list.find_elements(By.TAG_NAME, "li")
             for news in news_list:
                 url = news.find_element(By.TAG_NAME, "a").get_attribute("href")
-                title = news.find_element(By.TAG_NAME, "a").text
-                # self.__redis_cli.add_set_element('url', url)
-                print(title)
-                print(url)
+                # title = news.find_element(By.TAG_NAME, "a").text
+                self.__redis_cli.add_set_element('url', url)
+                msg = "add {} to redis key url success".format(url)
+                self.__kafka_cli.send_log("URLCollector.collect_new_setn_url", True, msg)
         except Exception as e:
-            print("collect_new_setn_url fail. Error is: {}".format(e))
+            error_msg = "collect_new_setn_url fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("URLCollector.collect_new_setn_url", False, error_msg)
 
     def collect_new_pts_url(self):
         # 獲取前10熱門的新聞
@@ -146,12 +154,13 @@ class URLCollector:
                 title = news.text
                 if not title:
                     continue
-                # self.__redis_cli.add_set_element('url', url)
-                print(title)
-                print(url)
+                self.__redis_cli.add_set_element('url', url)
+                msg = "add {} to redis key url success".format(url)
+                self.__kafka_cli.send_log("URLCollector.collect_new_pts_url", True, msg)
 
         except Exception as e:
-            print("collect_new_setn_url fail. Error is: {}".format(e))
+            error_msg = "collect_new_setn_url fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("URLCollector.collect_new_pts_url", False, error_msg)
 
     def __del__(self):
         self.__driver.quit()
@@ -159,4 +168,5 @@ class URLCollector:
 
 if __name__ == '__main__':
     uc = URLCollector()
-    uc.collect_new_tvbs_url()
+    uc.collect_new_pts_url()
+    print("finish")

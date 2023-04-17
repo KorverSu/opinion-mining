@@ -3,20 +3,17 @@ from src.client.redis_client import RedisClient
 from src.client.kafka_client import KafkaClient
 from selenium.webdriver.common.by import By
 from selenium import webdriver
-from src.config import DRIVER_PATH, SELENIUM_IP, SELENIUM_PORT
+from src.config import DRIVER_PATH, SELENIUM_IP, SELENIUM_PORT, CRAWLER_RESULT_TOPIC, LOG_TOPIC
 
 
 class CrawlerExecutor:
     def __init__(self, ip=SELENIUM_IP, port=SELENIUM_PORT):
         self.__host = "{}:{}".format(ip, port)
         self.__redis_cli = RedisClient()
+        self.__kafka_cli = KafkaClient()
         self.__driver = webdriver.Remote(
             command_executor='http://{}:{}'.format(ip, port),
             desired_capabilities={'browserName': 'chrome', 'javascriptEnabled': True})
-        self.__result = None
-
-    def get_result(self):
-        return self.__result
 
     def crawl_tvbs(self, source_url: str):
         # id ~ 2000000
@@ -34,11 +31,12 @@ class CrawlerExecutor:
                 "release_time": last_updated,
                 "contents": contents
             }
-            self.__result = result
+            self.__kafka_cli.produce_value(CRAWLER_RESULT_TOPIC, result)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_tvbs", True, "crawl_tvbs success.")
             print(result)
         except Exception as e:
-            print("crawl_tvbs fail. Error is: ", e)
-            self.__result = None
+            error_msg = "crawl_tvbs fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_tvbs", False, error_msg)
 
     def crawl_setn(self, source_url: str):
         # 三立新聞 id ~ 1300000
@@ -52,11 +50,12 @@ class CrawlerExecutor:
                 "release_time": release_time,
                 "contents": contents
             }
-            self.__result = result
+            self.__kafka_cli.produce_value(CRAWLER_RESULT_TOPIC, result)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_setn", True, "crawl_setn success.")
             print(result)
         except Exception as e:
-            print("crawl_setn fail. Error is: ", e)
-            self.__result = None
+            error_msg = "crawl_setn fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_setn", False, error_msg)
 
     def crawl_ebc(self, source_url: str):
         try:
@@ -71,11 +70,12 @@ class CrawlerExecutor:
                 "release_time": release_time,
                 "contents": contents
             }
-            self.__result = result
+            self.__kafka_cli.produce_value(CRAWLER_RESULT_TOPIC, result)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_ebc", True, "crawl_ebc success.")
             print(result)
         except Exception as e:
-            print('crawl_ebc fail. Error is: ', e)
-            self.__result = None
+            error_msg = "crawl_ebc fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_ebc", False, error_msg)
 
     def crawl_ttv(self, source_url: str):
         try:
@@ -88,11 +88,12 @@ class CrawlerExecutor:
                 "release_time": release_time,
                 "contents": contents
             }
-            self.__result = result
+            self.__kafka_cli.produce_value(CRAWLER_RESULT_TOPIC, result)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_ttv", True, "crawl_ttv success.")
             print(result)
         except Exception as e:
-            print('crawl_ttv fail. Error is: ', e)
-            self.__result = None
+            error_msg = "crawl_ttv fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_ttv", False, error_msg)
 
     def crawl_pts(self, source_url: str):
         # 公視 id ~ 629549
@@ -108,11 +109,12 @@ class CrawlerExecutor:
                 "release_time": last_updated,
                 "contents": contents
             }
-            self.__result = result
+            self.__kafka_cli.produce_value(CRAWLER_RESULT_TOPIC, result)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_pts", True, "crawl_pts success.")
             print(result)
         except Exception as e:
-            print('crawl_pts fail. Error is: ', e)
-            self.__result = None
+            error_msg = "crawl_pts fail. Error is: {}".format(e)
+            self.__kafka_cli.send_log("CrawlerExecutor.crawl_pts", False, error_msg)
 
     def check_tv_channel(self, source_url: str):
         if 'tvbs' in source_url:
@@ -126,14 +128,19 @@ class CrawlerExecutor:
         elif 'pts' in source_url:
             self.crawl_pts(source_url)
         else:
-            print('The url is invalid in check_tv_channel.')
+            msg = "{} is invalid in check_tv_channel.".format(source_url)
+            self.__kafka_cli.send_log("CrawlerExecutor.check_tv_channel", True, msg)
+            print(msg)
 
     def change_to_idle(self):
         try:
             self.__redis_cli.change_hash_value('selenium_nodes', self.__host, 'idle')
-            print('change to idle')
+            msg = "host {} change to idle.".format(self.__host)
+            self.__kafka_cli.send_log("CrawlerExecutor.change_to_idle", True, msg)
         except Exception as e:
             print('change to idle fail. Error is: ', e)
+            error_msg = "host {} change_to_idle fail. Error is: {}".format(self.__host, e)
+            self.__kafka_cli.send_log("CrawlerExecutor.change_to_idle", False, error_msg)
 
     def __del__(self):
         self.change_to_idle()
