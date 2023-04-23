@@ -10,4 +10,6 @@ BROKER1 = 'localhost:29092'
 BROKER2 = 'localhost:39092'
 CRAWLER_RESULT_TOPIC = 'crawler_result'
 LOG_TOPIC = 'log'
+ELASTICSEARCH_HOST = 'localhost'
+ELASTICSEARCH_PORT = 9200
 # docker run -d -p 4444:4444 --shm-size="2g" selenium/standalondocker run -d -p 4444:4444 --shm-size="2g" selenium/standalone-chrome:4.8.3-20230404e-chrome:4.8.3-20230404

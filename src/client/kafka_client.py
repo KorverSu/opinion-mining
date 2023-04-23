@@ -48,6 +48,7 @@ class KafkaClient:
             for msg in self.__consumer:
                 print("key: ", msg.key)
                 print("value: ", msg.value)
+                return msg.key, msg.value
 
         except Exception as e:
             print('consume_value fail. Error is {}'.format(e))
