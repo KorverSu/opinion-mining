@@ -28,11 +28,8 @@ class ElasticsearchClient:
     def delete_index(self, index_name):
         self.es.indices.delete(index=index_name)
 
-    def index_document(self, index_name, doc_id, body):
-        self.es.index(index=index_name, id=doc_id, body=body)
-
-    def get_document(self, index_name, doc_id):
-        return self.es.get(index=index_name, id=doc_id)['_source']
+    def index_document(self, index_name, body):
+        self.es.index(index=index_name, body=body)
 
     def search(self, index_name, query):
         return self.es.search(index=index_name, body=query)
@@ -52,4 +49,42 @@ class ElasticsearchClient:
 
 if __name__ == '__main__':
     es = ElasticsearchClient()
-    print(es.get_all_index())
+    settings = {
+        "index": {
+            "number_of_shards": 3,
+            "number_of_replicas": 2
+        }
+    }
+    news_mappings = {
+        "properties": {
+            "title": {
+                "type": "text"
+            },
+            "release_time": {
+                "type": "text"
+            },
+            "contents": {
+                "type": "text"
+            }
+        }
+    }
+    log_mappings = {
+        "properties": {
+            "time": {
+                "type": "text"
+            },
+            "method": {
+                "type": "text"
+            },
+            "status": {
+                "type": "boolean"
+            },
+            "message": {
+                "type": "text"
+            }
+        }
+    }
+    # es.create_index('news', settings, news_mappings)
+    # es.create_index('log', settings, log_mappings)
+    print(es.get_all_document('news')[0]['_source'])
+    print('ok')

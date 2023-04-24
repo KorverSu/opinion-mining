@@ -1,7 +1,7 @@
 version: '2.2'
 services:
   es01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0 #後面可以調整版本，這邊用7.9.0做示範
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
     container_name: es01
     environment:
       - node.name=es01
@@ -12,7 +12,7 @@ services:
       - "http.cors.allow-origin=*"
       - "http.cors.enabled=true"
       - "discovery.zen.minimum_master_nodes=2"
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" #這邊可以調整要分配多少heap給ES，最好不要超過本機RAM的一半
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ulimits:
       memlock:
         soft: -1
@@ -20,7 +20,7 @@ services:
     volumes:
       - data01:/usr/share/elasticsearch/data
     ports:
-      - 9200:9200 #設定port，預設是9200
+      - 9200:9200
     networks:
       - elastic
   es02:
@@ -66,7 +66,7 @@ services:
     networks:
       - elastic
   kib01:
-    image: docker.elastic.co/kibana/kibana:7.9.0 #這裡記得要跟你建立的Elasticsearch版本一樣
+    image: docker.elastic.co/kibana/kibana:7.9.0 
     container_name: kibana
     ports:
       - 5601:5601
