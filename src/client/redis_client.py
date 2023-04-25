@@ -87,13 +87,3 @@ class RedisClient:
 
     def __del__(self):
         self.__r.close()
-
-
-if __name__ == '__main__':
-    rc = RedisClient()
-    rc.change_hash_value('selenium_nodes', 'localhost:4444', 'idle')
-    rc.add_set_element('url', 'https://news.tvbs.com.tw/politics/2')
-    rc.add_set_element('url', 'https://news.tvbs.com.tw/politics/2096437')
-    rc.add_set_element('url', 'https://news.tvbs.com.tw/politics/2096391')
-    print(rc.fetch_all_hash_value('selenium_nodes'))
-    print(rc.fetch_set_elements("url"))

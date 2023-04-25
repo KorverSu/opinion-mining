@@ -76,9 +76,3 @@ class CrawlerScheduler:
         trigger = IntervalTrigger(hours=1)
         scheduler.add_job(self.get_popular_news, trigger)
         scheduler.start()
-
-
-if __name__ == '__main__':
-    cs = CrawlerScheduler()
-    # cs.run_executor()
-    # cs.collect_popular_news_per_hour()

@@ -1,6 +1,3 @@
-"""
-The class for the Elasticsearch client.
-"""
 from elasticsearch import Elasticsearch
 from src.config import ELASTICSEARCH_HOST, ELASTICSEARCH_PORT
 
@@ -44,47 +41,5 @@ class ElasticsearchClient:
         return self.es.indices.get_alias().keys()
 
     def get_all_document(self, index_name):
+        # print(es.get_all_document('news')[0]['_source'])
         return self.es.search(index=index_name, body={"query": {"match_all": {}}})['hits']['hits']
-
-
-if __name__ == '__main__':
-    es = ElasticsearchClient()
-    settings = {
-        "index": {
-            "number_of_shards": 3,
-            "number_of_replicas": 2
-        }
-    }
-    news_mappings = {
-        "properties": {
-            "title": {
-                "type": "text"
-            },
-            "release_time": {
-                "type": "text"
-            },
-            "contents": {
-                "type": "text"
-            }
-        }
-    }
-    log_mappings = {
-        "properties": {
-            "time": {
-                "type": "text"
-            },
-            "method": {
-                "type": "text"
-            },
-            "status": {
-                "type": "boolean"
-            },
-            "message": {
-                "type": "text"
-            }
-        }
-    }
-    # es.create_index('news', settings, news_mappings)
-    # es.create_index('log', settings, log_mappings)
-    print(es.get_all_document('news')[0]['_source'])
-    print('ok')

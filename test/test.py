@@ -8,9 +8,16 @@ consumer = KafkaConsumer('my_topic',
 for msg in consumer:
     print(msg.value)'''
 
-from src.client.kafka_client import KafkaClient
+'''from src.client.kafka_client import KafkaClient
 
 kc = KafkaClient()
-kc.consume_value('url', 'qwe')
+kc.consume_value('url', 'qwe')'''
 
+class test():
+    def __init__(self, a=3, b=3):
+        self.a = a
+        self.b = b
+
+
+print(test().b)
 

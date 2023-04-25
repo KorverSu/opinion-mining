@@ -13,6 +13,7 @@ class KafkaClient:
         self.__bootstrap_servers = '{},{}'.format(BROKER1, BROKER2)
 
     def set_new_topic(self, topic_name: str, num_partitions: int, replication_factor: int):
+        # partition: 1, replica: 2
         try:
             admin_client = KafkaAdminClient(bootstrap_servers=self.__bootstrap_servers)
             new_topic = NewTopic(name=topic_name, num_partitions=num_partitions, replication_factor=replication_factor)
